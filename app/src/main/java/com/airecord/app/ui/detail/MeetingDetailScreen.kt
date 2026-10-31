@@ -94,7 +94,7 @@ fun MeetingDetailScreen(meetingId: String, onBack: () -> Unit, onOpenSettings: (
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var shareMenu by remember { mutableStateOf(false) }
     var moreMenu by remember { mutableStateOf(false) }
-    var renameDialog by remember { mutableStateOf(false) }
+    var infoDialog by remember { mutableStateOf(false) }
     var deleteDialog by remember { mutableStateOf(false) }
     var editingSummary by rememberSaveable { mutableStateOf(false) }
     var summaryDraft by rememberSaveable { mutableStateOf("") }
@@ -128,20 +128,20 @@ fun MeetingDetailScreen(meetingId: String, onBack: () -> Unit, onOpenSettings: (
                     Box {
                         IconButton(onClick = { shareMenu = true }) { Icon(Icons.Default.Share, contentDescription = "공유") }
                         DropdownMenu(expanded = shareMenu, onDismissRequest = { shareMenu = false }) {
-                            ShareItem("요약 공유 (텍스트)", Icons.Default.Share) { shareMenu = false; ShareHelper.shareText(context, m, false) }
-                            ShareItem("요약 + 녹취록 공유", Icons.AutoMirrored.Filled.Subject) { shareMenu = false; ShareHelper.shareText(context, m, true) }
+                            ShareItem("회의록 공유 (텍스트)", Icons.Default.Share) { shareMenu = false; ShareHelper.shareText(context, m, false) }
+                            ShareItem("회의록 + 녹취록 공유", Icons.AutoMirrored.Filled.Subject) { shareMenu = false; ShareHelper.shareText(context, m, true) }
                             ShareItem("파일(.md)로 공유", Icons.AutoMirrored.Filled.InsertDriveFile) { shareMenu = false; ShareHelper.shareMarkdownFile(context, m) }
                             ShareItem("이메일로 보내기", Icons.Default.Email) { shareMenu = false; ShareHelper.email(context, m) }
                             ShareItem("녹음 파일 공유", Icons.Default.AudioFile) { shareMenu = false; ShareHelper.shareAudio(context, m) }
-                            ShareItem("요약 복사", Icons.Default.ContentCopy) { shareMenu = false; ShareHelper.copyToClipboard(context, m) }
+                            ShareItem("회의록 복사", Icons.Default.ContentCopy) { shareMenu = false; ShareHelper.copyToClipboard(context, m) }
                             ShareItem("기기에 저장", Icons.Default.Save) { shareMenu = false; saveLauncher.launch(MeetingExporter.fileName(m, "md")) }
                         }
                     }
                     Box {
                         IconButton(onClick = { moreMenu = true }) { Icon(Icons.Default.MoreVert, contentDescription = "더보기") }
                         DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
-                            DropdownMenuItem(text = { Text("제목 변경") }, leadingIcon = { Icon(Icons.Default.Edit, null) },
-                                onClick = { moreMenu = false; renameDialog = true })
+                            DropdownMenuItem(text = { Text("회의 정보 편집") }, leadingIcon = { Icon(Icons.Default.Edit, null) },
+                                onClick = { moreMenu = false; infoDialog = true })
                             DropdownMenuItem(text = { Text("다시 전사 + 요약") }, leadingIcon = { Icon(Icons.Default.Refresh, null) },
                                 enabled = !busy, onClick = { moreMenu = false; enqueue(ProcessingTask.FULL) })
                             DropdownMenuItem(text = { Text("다시 요약") }, leadingIcon = { Icon(Icons.Default.AutoAwesome, null) },
@@ -213,7 +213,7 @@ fun MeetingDetailScreen(meetingId: String, onBack: () -> Unit, onOpenSettings: (
 
             item {
                 TabRow(selectedTabIndex = tab) {
-                    Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("AI 요약") })
+                    Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("회의록") })
                     Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("녹취록 (${m.segments.size})") })
                 }
             }
@@ -237,11 +237,12 @@ fun MeetingDetailScreen(meetingId: String, onBack: () -> Unit, onOpenSettings: (
                                 }
                             }
                             m.summary != null -> {
-                                MarkdownText(m.summary!!)
+                                MarkdownText(MeetingExporter.summary(m))
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 16.dp)) {
                                     OutlinedButton(onClick = { summaryDraft = m.summary!!; editingSummary = true }) {
-                                        Icon(Icons.Default.Edit, null); Spacer(Modifier.width(6.dp)); Text("수정")
+                                        Icon(Icons.Default.Edit, null); Spacer(Modifier.width(6.dp)); Text("본문 수정")
                                     }
+                                    OutlinedButton(onClick = { infoDialog = true }) { Text("회의 정보") }
                                     Button(onClick = { ShareHelper.shareText(context, m, false) }) {
                                         Icon(Icons.Default.Share, null); Spacer(Modifier.width(6.dp)); Text("공유")
                                     }
@@ -256,9 +257,19 @@ fun MeetingDetailScreen(meetingId: String, onBack: () -> Unit, onOpenSettings: (
                                 }
                             }
                             m.segments.isNotEmpty() && !busy -> {
-                                Text("아직 요약이 없습니다.", style = MaterialTheme.typography.bodyMedium)
-                                Button(onClick = { enqueue(ProcessingTask.SUMMARIZE) }, modifier = Modifier.padding(top = 8.dp)) {
-                                    Icon(Icons.Default.AutoAwesome, null); Spacer(Modifier.width(6.dp)); Text("AI 요약 생성")
+                                Text("아직 회의록이 없습니다.", style = MaterialTheme.typography.bodyMedium)
+                                if (m.attendees.isBlank()) {
+                                    Text(
+                                        "참석자를 입력하면 발언자·담당자 이름이 회의록에 반영됩니다.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                                    OutlinedButton(onClick = { infoDialog = true }) { Text("회의 정보 입력") }
+                                    Button(onClick = { enqueue(ProcessingTask.SUMMARIZE) }) {
+                                        Icon(Icons.Default.AutoAwesome, null); Spacer(Modifier.width(6.dp)); Text("AI 회의록 작성")
+                                    }
                                 }
                             }
                             m.status == MeetingStatus.RECORDED && !busy -> {
@@ -267,7 +278,7 @@ fun MeetingDetailScreen(meetingId: String, onBack: () -> Unit, onOpenSettings: (
                                     Text("전사 + 요약 시작")
                                 }
                             }
-                            else -> Text("요약을 준비하고 있습니다…", style = MaterialTheme.typography.bodyMedium)
+                            else -> Text("회의록을 준비하고 있습니다…", style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
@@ -294,19 +305,36 @@ fun MeetingDetailScreen(meetingId: String, onBack: () -> Unit, onOpenSettings: (
         }
     }
 
-    if (renameDialog) {
+    if (infoDialog) {
         var title by remember { mutableStateOf(m.title) }
+        var location by remember { mutableStateOf(m.location) }
+        var attendees by remember { mutableStateOf(m.attendees) }
         AlertDialog(
-            onDismissRequest = { renameDialog = false },
-            title = { Text("제목 변경") },
-            text = { OutlinedTextField(value = title, onValueChange = { title = it }, singleLine = true) },
+            onDismissRequest = { infoDialog = false },
+            title = { Text("회의 정보") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("회의명") }, singleLine = true)
+                    OutlinedTextField(value = location, onValueChange = { location = it }, label = { Text("장소") }, singleLine = true)
+                    OutlinedTextField(
+                        value = attendees, onValueChange = { attendees = it },
+                        label = { Text("참석자 (쉼표로 구분)") }, placeholder = { Text("예: 김팀장, 이대리, 박주임") },
+                    )
+                    Text(
+                        "회의록 머리말에 들어갑니다. 참석자 이름은 다시 요약할 때 AI가 발언자·담당자로도 사용합니다.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
-                    repo.update(m.id) { it.copy(title = title.trim().ifEmpty { it.title }) }
-                    renameDialog = false
+                    repo.update(m.id) {
+                        it.copy(title = title.trim().ifEmpty { it.title }, location = location.trim(), attendees = attendees.trim())
+                    }
+                    infoDialog = false
                 }) { Text("저장") }
             },
-            dismissButton = { TextButton(onClick = { renameDialog = false }) { Text("취소") } },
+            dismissButton = { TextButton(onClick = { infoDialog = false }) { Text("취소") } },
         )
     }
     if (deleteDialog) {

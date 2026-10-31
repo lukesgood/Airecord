@@ -17,9 +17,30 @@ class ExporterTest {
     )
 
     @Test
-    fun fullExportContainsSummaryAndTranscript() {
-        val text = MeetingExporter.full(meeting)
-        assertTrue(text.startsWith("# 주간/회의: 1차"))
+    fun minutesExportHasHeaderFromMetadata() {
+        val m = meeting.copy(location = "3층 회의실", attendees = "김팀장, 이대리", summaryStyle = "minutes")
+        val text = MeetingExporter.full(m)
+        assertTrue(text, text.startsWith("# 회의록: 주간/회의: 1차\n"))
+        assertTrue(text.contains("- **일시:** "))
+        assertTrue(text.contains("(01:05)"))
+        assertTrue(text.contains("- **장소:** 3층 회의실"))
+        assertTrue(text.contains("- **참석자:** 김팀장, 이대리"))
+        assertTrue(text.contains("## 첨부: 녹취록"))
+        assertTrue(text.contains("[01:01] 끝"))
+
+        // Empty place / attendees are left out rather than printed blank.
+        val bare = MeetingExporter.summary(meeting)
+        assertTrue(!bare.contains("장소") && !bare.contains("참석자"))
+
+        val en = MeetingExporter.summary(m.copy(summaryLanguage = "en"))
+        assertTrue(en.startsWith("# Meeting Minutes: "))
+        assertTrue(en.contains("- **Attendees:** 김팀장, 이대리"))
+    }
+
+    @Test
+    fun briefExportKeepsShortHeader() {
+        val text = MeetingExporter.full(meeting.copy(summaryStyle = "brief"))
+        assertTrue(text.startsWith("# 주간/회의: 1차\n"))
         assertTrue(text.contains("01:05"))
         assertTrue(text.contains("[01:01] 끝"))
         assertEquals("주간_회의_ 1차.md", MeetingExporter.fileName(meeting, "md"))

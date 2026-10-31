@@ -12,6 +12,8 @@ data class AppSettings(
     val language: String = "ko",
     /** Language the summary is written in: "ko" or "en". */
     val summaryLanguage: String = "ko",
+    /** [com.airecord.app.core.SummaryStyle] key: "minutes" (formal 회의록) or "brief". */
+    val summaryStyle: String = "minutes",
     val threads: Int = defaultThreads(),
     val useGpu: Boolean = true,
     val llmMaxTokens: Int = 4096,
@@ -36,6 +38,7 @@ class SettingsRepository(context: Context) {
             .putString("llmModel", next.llmModel)
             .putString("language", next.language)
             .putString("summaryLanguage", next.summaryLanguage)
+            .putString("summaryStyle", next.summaryStyle)
             .putInt("threads", next.threads)
             .putBoolean("useGpu", next.useGpu)
             .putInt("llmMaxTokens", next.llmMaxTokens)
@@ -52,6 +55,7 @@ class SettingsRepository(context: Context) {
             llmModel = prefs.getString("llmModel", d.llmModel),
             language = prefs.getString("language", d.language) ?: d.language,
             summaryLanguage = prefs.getString("summaryLanguage", d.summaryLanguage) ?: d.summaryLanguage,
+            summaryStyle = prefs.getString("summaryStyle", d.summaryStyle) ?: d.summaryStyle,
             threads = prefs.getInt("threads", d.threads),
             useGpu = prefs.getBoolean("useGpu", d.useGpu),
             llmMaxTokens = prefs.getInt("llmMaxTokens", d.llmMaxTokens),

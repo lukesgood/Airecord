@@ -21,6 +21,14 @@ data class Meeting(
     val sttModel: String? = null,
     val llmModel: String? = null,
     val llmBackend: String? = null,
+    /** Free-text meeting place, entered by the user. */
+    val location: String = "",
+    /** Free-text attendee list, entered by the user. Also given to the AI for names. */
+    val attendees: String = "",
+    /** [com.airecord.app.core.SummaryStyle] key the summary was written in. */
+    val summaryStyle: String? = null,
+    /** Language ("ko"/"en") the summary was written in. */
+    val summaryLanguage: String? = null,
 ) {
     val transcriptText: String get() = segments.joinToString("\n") { it.text }
 }

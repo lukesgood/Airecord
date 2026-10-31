@@ -2,6 +2,8 @@ package com.airecord.app.service
 
 import android.content.Context
 import com.airecord.app.AppContainer
+import com.airecord.app.core.SummaryRequest
+import com.airecord.app.core.SummaryStyle
 import com.airecord.app.data.MeetingStatus
 import com.airecord.app.data.Segment
 import com.airecord.app.llm.LlmSummarizer
@@ -84,15 +86,28 @@ class MeetingProcessor(private val context: Context, private val container: AppC
         repo.update(id) { it.copy(status = MeetingStatus.SUMMARIZING, error = null, llmModel = model.name) }
         onState(ProcessingState(id, Stage.LOADING_LLM, detail = model.name))
 
+        val request = SummaryRequest(
+            title = meeting.title,
+            lang = settings.summaryLanguage,
+            style = SummaryStyle.from(settings.summaryStyle),
+            attendees = meeting.attendees,
+        )
         LlmSummarizer.create(context, model, settings.useGpu, settings.llmMaxTokens).use { llm ->
             val summary = llm.summarize(
                 transcript = meeting.transcriptText,
-                title = meeting.title,
-                lang = settings.summaryLanguage,
+                request = request,
                 onProgress = { p, detail -> onState(ProcessingState(id, Stage.SUMMARIZING, p, "$detail · ${llm.backend}")) },
                 isCancelled = isCancelled,
             )
-            repo.update(id) { it.copy(summary = summary, status = MeetingStatus.DONE, llmBackend = llm.backend) }
+            repo.update(id) {
+                it.copy(
+                    summary = summary,
+                    status = MeetingStatus.DONE,
+                    llmBackend = llm.backend,
+                    summaryStyle = request.style.key,
+                    summaryLanguage = request.lang,
+                )
+            }
         }
     }
 }

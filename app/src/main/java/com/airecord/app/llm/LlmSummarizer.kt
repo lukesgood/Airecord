@@ -2,6 +2,7 @@ package com.airecord.app.llm
 
 import android.content.Context
 import com.airecord.app.core.SummaryPrompts
+import com.airecord.app.core.SummaryRequest
 import com.airecord.app.core.TextChunker
 import com.airecord.app.service.ProcessingCancelledException
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
@@ -21,8 +22,7 @@ class LlmSummarizer private constructor(
 
     fun summarize(
         transcript: String,
-        title: String,
-        lang: String,
+        request: SummaryRequest,
         onProgress: (Float, String) -> Unit,
         isCancelled: () -> Boolean,
     ): String {
@@ -31,15 +31,15 @@ class LlmSummarizer private constructor(
         require(chunks.isNotEmpty()) { "요약할 내용이 없습니다" }
 
         if (chunks.size == 1) {
-            onProgress(0f, "요약 작성 중")
-            return SummaryPrompts.cleanOutput(generate(SummaryPrompts.finalPrompt(chunks[0], title, lang), isCancelled))
+            onProgress(0f, "회의록 작성 중")
+            return SummaryPrompts.cleanOutput(generate(SummaryPrompts.finalPrompt(chunks[0], request), isCancelled))
         }
 
         // Map: notes for each part. The final merge counts as one more step.
         val steps = chunks.size + 1f
         var notes = chunks.mapIndexed { i, chunk ->
             onProgress(i / steps, "부분 요약 ${i + 1}/${chunks.size}")
-            SummaryPrompts.cleanOutput(generate(SummaryPrompts.chunkPrompt(chunk, i, chunks.size, lang), isCancelled))
+            SummaryPrompts.cleanOutput(generate(SummaryPrompts.chunkPrompt(chunk, i, chunks.size, request), isCancelled))
         }
 
         // Reduce: condense until the notes fit in a single prompt.
@@ -49,13 +49,13 @@ class LlmSummarizer private constructor(
             val groups = TextChunker.chunk(notes.joinToString("\n"), budget)
             notes = groups.mapIndexed { i, g ->
                 onProgress((steps - 1) / steps, "메모 압축 ${rounds}회차 ${i + 1}/${groups.size}")
-                SummaryPrompts.cleanOutput(generate(SummaryPrompts.condensePrompt(g, lang), isCancelled))
+                SummaryPrompts.cleanOutput(generate(SummaryPrompts.condensePrompt(g, request), isCancelled))
             }
         }
         val merged = notes.joinToString("\n").let { if (it.length > budget) it.take(budget) else it }
 
         onProgress((steps - 1) / steps, "최종 회의록 작성 중")
-        return SummaryPrompts.cleanOutput(generate(SummaryPrompts.mergePrompt(merged, title, lang), isCancelled))
+        return SummaryPrompts.cleanOutput(generate(SummaryPrompts.mergePrompt(merged, request), isCancelled))
     }
 
     private fun generate(prompt: String, isCancelled: () -> Boolean): String {

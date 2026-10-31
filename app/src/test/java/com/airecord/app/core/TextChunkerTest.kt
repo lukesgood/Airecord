@@ -44,9 +44,30 @@ class TextChunkerTest {
     }
 
     @Test
+    fun minutesPromptHasMinutesStructureAndAttendees() {
+        val r = SummaryRequest("주간회의", attendees = "김팀장, 이대리")
+        val p = SummaryPrompts.finalPrompt("본문", r)
+        listOf("## 1. 회의 안건", "## 2. 안건별 논의 내용", "## 3. 결정 사항", "## 4. 향후 조치 사항", "## 5. 기타 사항", "개조식", "김팀장, 이대리")
+            .forEach { assertTrue(it, p.contains(it)) }
+        val merge = SummaryPrompts.mergePrompt("- 메모", r)
+        assertTrue(merge.contains("## 4. 향후 조치 사항"))
+
+        val brief = SummaryPrompts.finalPrompt("본문", SummaryRequest("주간회의", style = SummaryStyle.BRIEF))
+        assertTrue(brief.contains("## 한 줄 요약"))
+        assertTrue(!brief.contains("개조식") && !brief.contains("참석자:"))
+
+        val en = SummaryPrompts.finalPrompt("text", SummaryRequest("Weekly", lang = "en"))
+        assertTrue(en.contains("## 4. Action items"))
+        assertEquals(SummaryStyle.MINUTES, SummaryStyle.from(null))
+        assertEquals(SummaryStyle.BRIEF, SummaryStyle.from("brief"))
+    }
+
+    @Test
     fun promptsAndOutputCleaning() {
-        assertTrue(SummaryPrompts.finalPrompt("본문", "주간회의", "ko").contains("\"\"\"\n본문\n\"\"\""))
+        assertTrue(SummaryPrompts.finalPrompt("본문", SummaryRequest("주간회의")).contains("\"\"\"\n본문\n\"\"\""))
         assertTrue(SummaryPrompts.chunkCharBudget(4096) in 2000..3000)
         assertEquals("## 요약\n- a", SummaryPrompts.cleanOutput("```markdown\n## 요약\n- a\n```<end_of_turn>"))
+        // A self-made document title is dropped; the app writes the real header.
+        assertEquals("## 1. 회의 안건\n1. 예산", SummaryPrompts.cleanOutput("# 회의록\n\n## 1. 회의 안건\n1. 예산"))
     }
 }

@@ -45,7 +45,11 @@ fun MarkdownText(markdown: String, modifier: Modifier = Modifier) {
                     val level = line.takeWhile { it == '#' }.length
                     Text(
                         inline(line.drop(level).trim()),
-                        style = if (level <= 1) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium,
+                        style = when (level) {
+                            1 -> MaterialTheme.typography.titleLarge
+                            2 -> MaterialTheme.typography.titleMedium
+                            else -> MaterialTheme.typography.titleSmall
+                        },
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
@@ -58,11 +62,21 @@ fun MarkdownText(markdown: String, modifier: Modifier = Modifier) {
                         Text(inline(line.trimStart().drop(2)), style = MaterialTheme.typography.bodyLarge)
                     }
                 }
+                NUMBERED.matches(line.trimStart()) -> {
+                    val indent = line.length - line.trimStart().length
+                    Text(
+                        inline(line.trimStart()),
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(start = (indent * 6).dp, bottom = 2.dp),
+                    )
+                }
                 else -> Text(inline(line), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(bottom = 2.dp))
             }
         }
     }
 }
+
+private val NUMBERED = Regex("^\\d+[.)] .*")
 
 private fun inline(text: String) = buildAnnotatedString {
     val parts = text.split("**")

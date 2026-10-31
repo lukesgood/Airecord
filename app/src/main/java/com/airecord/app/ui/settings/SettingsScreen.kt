@@ -174,6 +174,10 @@ fun SettingsScreen(onBack: () -> Unit) {
                 ChoiceRow("인식 언어", settings.language, listOf("ko" to "한국어", "en" to "영어", "ja" to "일본어", "auto" to "자동")) { v ->
                     container.settings.update { it.copy(language = v) }
                 }
+                ChoiceRow(
+                    "요약 스타일", settings.summaryStyle,
+                    listOf("minutes" to "회의록", "brief" to "간단 요약"),
+                ) { v -> container.settings.update { it.copy(summaryStyle = v) } }
                 ChoiceRow("요약 언어", settings.summaryLanguage, listOf("ko" to "한국어", "en" to "English")) { v ->
                     container.settings.update { it.copy(summaryLanguage = v) }
                 }

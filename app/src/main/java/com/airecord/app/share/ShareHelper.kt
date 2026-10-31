@@ -71,7 +71,7 @@ object ShareHelper {
     fun copyToClipboard(context: Context, meeting: Meeting) {
         val cm = context.getSystemService(ClipboardManager::class.java)
         cm.setPrimaryClip(ClipData.newPlainText(meeting.title, MeetingExporter.summary(meeting)))
-        Toast.makeText(context, "요약을 클립보드에 복사했습니다", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "회의록을 클립보드에 복사했습니다", Toast.LENGTH_SHORT).show()
     }
 
     /** Writes the full Markdown to a location the user picked with ACTION_CREATE_DOCUMENT. */

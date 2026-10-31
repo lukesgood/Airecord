@@ -1,6 +1,8 @@
 package com.airecord.app.ui.record
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,6 +24,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -30,6 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,7 +76,7 @@ fun RecordScreen(meetingId: String, onBack: () -> Unit, onFinished: () -> Unit) 
         },
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -109,11 +113,37 @@ fun RecordScreen(meetingId: String, onBack: () -> Unit, onFinished: () -> Unit) 
                 }
             }
             Spacer(Modifier.height(32.dp))
+            meeting?.let { m -> MeetingInfoFields(m.id, m.location, m.attendees) }
+            Spacer(Modifier.height(16.dp))
             Text(
-                "화면을 꺼도 녹음은 계속됩니다.\n종료하면 기기 안에서 자동으로 전사·요약합니다.",
+                "화면을 꺼도 녹음은 계속됩니다.\n종료하면 기기 안에서 자동으로 전사하고 회의록을 작성합니다.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+/** Lets the user fill in place / attendees during the meeting so the automatic minutes include them. */
+@Composable
+private fun MeetingInfoFields(meetingId: String, initialLocation: String, initialAttendees: String) {
+    val repo = LocalContext.current.container.meetings
+    var location by rememberSaveable(meetingId) { mutableStateOf(initialLocation) }
+    var attendees by rememberSaveable(meetingId) { mutableStateOf(initialAttendees) }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = location,
+            onValueChange = { v -> location = v; repo.update(meetingId) { it.copy(location = v.trim()) } },
+            label = { Text("장소 (선택)") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = attendees,
+            onValueChange = { v -> attendees = v; repo.update(meetingId) { it.copy(attendees = v.trim()) } },
+            label = { Text("참석자 (선택, 쉼표로 구분)") },
+            placeholder = { Text("예: 김팀장, 이대리, 박주임") },
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
