@@ -1,0 +1,6 @@
+-keep class com.airecord.app.stt.WhisperLib { *; }
+-keep interface com.airecord.app.stt.WhisperProgressListener { *; }
+-keep class com.google.mediapipe.** { *; }
+-dontwarn com.google.mediapipe.**
+-keep class com.google.protobuf.** { *; }
+-dontwarn com.google.protobuf.**
